@@ -1,0 +1,288 @@
+---
+title: "Astrological Analysis of the PWHL"
+subtitle: "By someone who doesn't know anything about astrology or hockey"
+author: "Alexandra McSween"
+format:
+  revealjs: 
+    theme: sky
+---
+
+```{r}
+# devtools::install_github(repo = "sportsdataverse/fastRhockey")
+
+library(fastRhockey)
+library(tidyverse)
+library(DescTools)
+library(janitor)
+source("./fixed_functions.R")
+
+colours <- list(
+"BOS" = "#154734",
+"MIN" = "#2E1A47",
+"MON" = "#862633",
+"NY" = "#00B2A9",
+"OTT" = "#A6192E",
+"TOR" = "#307FE2"
+)
+
+
+
+
+# create a nice function to lapply to our team vector
+
+team_stats <- function() {
+ 
+  # get vector of team abbreviations
+  teams <- fastRhockey::pwhl_teams()$team_code
+
+  all_teams <- data.frame()
+
+  for (team in teams){
+
+  # here we use our modified functions
+  df_stats <- pwhl_stats_fix(position = "skater", team = team, season = 2023)
+
+  df_team <- pwhl_team_roster_fix(
+    team = team,
+    season = 2023
+  ) %>%
+      mutate(
+        sign = DescTools::Zodiac(as.Date(dob))
+      ) %>%
+      merge(
+        df_stats,
+        by.x = c("player_id","player_name", "team"),
+        by.y = c("player_id", "player","team")
+      )
+    
+    all_teams <- rbind(all_teams, df_team)
+  }
+
+  return(all_teams)
+
+}
+
+# get data
+
+all_teams <- team_stats()
+
+```
+
+## Astrological Composition of the PWHL
+
+```{r}
+# let's look at totals by sign
+
+all_teams %>% ggplot(aes(sign, fill = team)) +
+  geom_bar() + 
+  scale_fill_manual(values = colours) +
+  labs(
+    title = "Signs of the PWHL by team",
+    fill = "Team"
+  ) +
+  theme(
+    plot.title = element_text(size=24)
+  )
+
+```
+
+## Astrological Composition of the PWHL
+
+```{r}
+# the above is a little overwhelming, let's convert to type of sign
+
+all_teams <- all_teams %>% mutate(
+  type = case_when(
+    sign %in% c("Cancer", "Scorpio", "Pisces") ~ "Water", 
+    sign %in% c("Aries", "Leo", "Sagittarius") ~ "Fire", 
+    sign %in% c("Taurus", "Virgo", "Capricorn") ~ "Earth",
+    sign %in% c("Gemini", "Libra", "Aquarius") ~ "Air"
+  )
+)
+
+all_teams %>% ggplot(aes(type, fill = team)) +
+  geom_bar() + 
+  scale_fill_manual(values = colours) +
+  labs(
+    title = "Sign types of the PWHL by team",
+    fill = "Team"
+  ) +
+  theme(
+    plot.title = element_text(size=24)
+)
+
+```
+
+## Astrological Composition of the PWHL
+
+```{r}
+
+all_teams %>% 
+  ggplot(aes(sign, fill = position.x)) +
+  geom_bar() +
+  labs(
+    title = "Signs of the PWHL by position",
+    fill = "Position"
+  ) +
+  theme(
+    plot.title = element_text(size=24)
+)
+ 
+
+```
+
+## Analysis
+
+Let's explore the astrological composition of our top scorers and top penalty minuters!
+
+## Most goals
+
+```{r}
+
+# Grab the top 10 scorers
+
+tail(all_teams[order(as.numeric(all_teams$goals)),], 10) %>%
+  ggplot(aes(sign, fill = team)) +
+  geom_bar() +
+  scale_fill_manual(values = colours) +
+  labs(
+    title = "Sign of top 10 scorers",
+    fill = "Team"
+  ) +
+  theme(
+    plot.title = element_text(size=24),
+    text = element_text(family = "Quicksand")
+    )
+
+```
+
+
+## All goals by sign
+
+```{r}
+
+all_teams %>% group_by(team, sign) %>%
+  summarize(goals = sum(as.numeric(goals))) %>%
+  ggplot(aes(sign, goals, fill = team)) +
+    geom_bar(stat = "identity") + 
+    scale_fill_manual(values = colours) +
+    labs(
+    title = "Goals by sign",
+    fill = "Team"
+  ) +
+    theme(
+      plot.title = element_text(size=24)
+    )
+```
+
+## All goals by sign
+
+```{r}
+# this could be skewed if there are many libras in the PWHL, for example.
+
+all_teams %>% group_by(team, sign) %>%
+  summarize(goals = sum(as.numeric(goals)), n = n()) %>%
+  mutate(adjusted_goals = goals / n) %>%
+  ggplot(aes(sign, adjusted_goals, fill = team)) +
+    geom_bar(stat = "identity") + 
+    scale_fill_manual(values = colours) +
+    labs(
+    title = "Proportional Goals by sign",
+    fill = "Team"
+  ) +
+    theme(
+      plot.title = element_text(size=24)
+    )
+
+```
+
+## Penalty minutes
+```{r}
+
+tail(all_teams[order(as.numeric(all_teams$penalty_minutes)),], 10) %>%
+  ggplot(aes(sign, fill = team)) +
+  geom_bar() + 
+  scale_fill_manual(values = colours) +
+  labs(
+    title = "Sign of top 10 penalty-havers",
+    fill = "Team"
+  ) +
+  theme(
+    plot.title = element_text(size=24)
+  )
+```
+
+## All penalty minutes by sign
+
+```{r}
+# sim for penalty min
+
+all_teams %>% group_by(team, sign) %>%
+  summarize(penalty_minutes = sum(as.numeric(penalty_minutes))) %>%
+  ggplot(aes(sign, penalty_minutes, fill = team)) +
+    geom_bar(stat = "identity") + 
+    scale_fill_manual(values = colours) +
+    labs(
+    title = "Penalty minutes by sign",
+    fill = "Team"
+  ) +
+    theme(
+      plot.title = element_text(size=24)
+    )
+```
+
+## All penalty minutes by sign
+
+```{r}
+
+all_teams %>% group_by(team, sign) %>%
+  summarize(penalty_minutes = sum(as.numeric(penalty_minutes)), n = n()) %>%
+  mutate(adjusted_penalty_minutes = penalty_minutes / n) %>%
+  ggplot(aes(sign, adjusted_penalty_minutes, fill = team)) +
+    geom_bar(stat = "identity") + 
+    scale_fill_manual(values = colours) +
+    labs(
+    title = "Proportional penalty minutes by sign",
+    fill = "Team"
+  ) +
+    theme(
+      plot.title = element_text(size=24)
+    )
+```
+
+## Don't forget the goalies!!
+
+```{r}
+
+goalies <- pwhl_stats() %>% 
+  merge(
+    all_teams, on = "player_name"
+  )
+
+surnames <- unlist(strsplit(goalies$player_name, " "))
+
+surnames <- surnames[c(FALSE, TRUE)]
+
+goalies %>%
+  ggplot(
+  aes(player_name, save_percentage, fill = sign)) +
+  geom_bar(stat = "identity") + 
+  labs(
+    title = "Save Percentage by Goalie (and her sign)",
+    fill = "Sign",
+    x = "Player",
+    y = "Save Percentage"
+  ) +
+  scale_x_discrete(labels = surnames) +
+  theme(
+    plot.title = element_text(size=24)
+  )
+
+
+```
+
+## Acknowledgements
+
+Thank you to Brittny Vongdara for sharing her idea to analyze PWHL data!
+
+Thank you to Murdoch McSween for sharing his astrology expertise!
