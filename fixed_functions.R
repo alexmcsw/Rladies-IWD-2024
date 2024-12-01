@@ -15,7 +15,7 @@
 #'   try(pwhl_team_roster(season = 2023, team = "Toronto"))
 #' }
 
-pwhl_team_roster_fix <- function(team, season = 2023, regular = TRUE) {
+pwhl_team_roster_fix <- function(team, season = 2024, regular = TRUE) {
 
   # team_id <- 1 # will need the team/season look ups
   team_id <- fastRhockey::pwhl_teams() %>%
