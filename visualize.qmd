@@ -8,7 +8,7 @@ format:
 ---
 
 ```{r}
-# devtools::install_github(repo = "sportsdataverse/fastRhockey")
+#devtools::install_github(repo = "sportsdataverse/fastRhockey")
 
 library(fastRhockey)
 library(tidyverse)
@@ -40,7 +40,12 @@ team_stats <- function() {
   for (team in teams){
 
   # here we use our modified functions
-  df_stats <- pwhl_stats_fix(position = "skater", team = team, season = 2023)
+  df_stats <- pwhl_stats_fix(position = "skater", team = team, season = 2023) |>
+    mutate(team = case_when(
+      team == "MTL" ~ "MON",
+      .default = team
+      )
+    )
 
   df_team <- pwhl_team_roster_fix(
     team = team,
@@ -127,7 +132,7 @@ all_teams %>%
   theme(
     plot.title = element_text(size=24)
 )
- 
+
 
 ```
 
