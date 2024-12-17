@@ -49,7 +49,7 @@ team_stats <- function() {
 
   df_team <- pwhl_team_roster_fix(
     team = team,
-    season = 2023
+    season = 2024
   ) %>%
       mutate(
         sign = DescTools::Zodiac(as.Date(dob))
