@@ -71,6 +71,8 @@ team_stats <- function() {
 
 all_teams <- team_stats()
 
+print(all_teams |> head())
+
 ```
 
 ## Astrological Composition of the PWHL
