@@ -40,7 +40,7 @@ team_stats <- function() {
   for (team in teams){
 
   # here we use our modified functions
-  df_stats <- pwhl_stats_fix(position = "skater", team = team, season = 2023) |>
+  df_stats <- pwhl_stats_fix(position = "skater", team = team, season = 2025) |>
     mutate(team = case_when(
       team == "MTL" ~ "MON",
       .default = team
@@ -49,7 +49,7 @@ team_stats <- function() {
 
   df_team <- pwhl_team_roster_fix(
     team = team,
-    season = 2024
+    season = 2025
   ) %>%
       mutate(
         sign = DescTools::Zodiac(as.Date(dob))
