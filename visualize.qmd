@@ -8,7 +8,7 @@ format:
 ---
 
 ```{r}
-#devtools::install_github(repo = "sportsdataverse/fastRhockey")
+# devtools::install_github(repo = "sportsdataverse/fastRhockey")
 
 library(fastRhockey)
 library(tidyverse)
@@ -19,18 +19,17 @@ source("./fixed_functions.R")
 colours <- list(
 "BOS" = "#154734",
 "MIN" = "#2E1A47",
-"MON" = "#862633",
+"MTL" = "#862633",
 "NY" = "#00B2A9",
 "OTT" = "#A6192E",
 "TOR" = "#307FE2"
 )
 
-
-
+season <- 2025
 
 # create a nice function to lapply to our team vector
 
-team_stats <- function() {
+teams <- function() {
  
   # get vector of team abbreviations
   teams <- fastRhockey::pwhl_teams()$team_code
@@ -39,25 +38,12 @@ team_stats <- function() {
 
   for (team in teams){
 
-  # here we use our modified functions
-  df_stats <- pwhl_stats_fix(position = "skater", team = team, season = 2025) |>
-    mutate(team = case_when(
-      team == "MTL" ~ "MON",
-      .default = team
-      )
-    )
-
-  df_team <- pwhl_team_roster_fix(
+  df_team <- fastRhockey::pwhl_team_roster(
     team = team,
-    season = 2025
+    season = season
   ) %>%
       mutate(
         sign = DescTools::Zodiac(as.Date(dob))
-      ) %>%
-      merge(
-        df_stats,
-        by.x = c("player_id","player_name", "team"),
-        by.y = c("player_id", "player","team")
       )
     
     all_teams <- rbind(all_teams, df_team)
@@ -69,9 +55,46 @@ team_stats <- function() {
 
 # get data
 
-all_teams <- team_stats()
+all_teams_no_stats <- teams()
 
-print(all_teams |> head())
+
+# create a nice function to lapply to our team vector
+
+team_stats <- function() {
+ 
+  # get vector of team abbreviations
+  teams <- fastRhockey::pwhl_teams()$team_label
+
+  all_teams <- data.frame()
+
+  for (team in teams){
+
+  # here we use our modified functions
+  df_stats <- pwhl_stats_fix(position = "skater", team = team, season = season)
+
+  df_team <- pwhl_team_roster(
+    team = team,
+    season = season
+  ) %>%
+      mutate(
+        sign = DescTools::Zodiac(as.Date(dob))
+      ) %>%
+      merge(
+        df_stats,
+        by = c("player_id")
+      )
+    
+    all_teams <- rbind(all_teams, df_team) |>
+      filter(current_team == 1)
+  }
+
+  return(all_teams)
+
+}
+
+# get data
+
+all_teams <- team_stats()
 
 ```
 
@@ -80,11 +103,11 @@ print(all_teams |> head())
 ```{r}
 # let's look at totals by sign
 
-all_teams %>% ggplot(aes(sign, fill = team)) +
+all_teams %>% ggplot(aes(sign, fill = team.y)) +
   geom_bar() + 
   scale_fill_manual(values = colours) +
   labs(
-    title = "Signs of the PWHL by team",
+    title = paste0("Signs of the PWHL by team in ", season - 1, "/", season),
     fill = "Team"
   ) +
   theme(
@@ -107,11 +130,11 @@ all_teams <- all_teams %>% mutate(
   )
 )
 
-all_teams %>% ggplot(aes(type, fill = team)) +
+all_teams %>% ggplot(aes(type, fill = team.y)) +
   geom_bar() + 
   scale_fill_manual(values = colours) +
   labs(
-    title = "Sign types of the PWHL by team",
+    title = paste0("Sign types of the PWHL by team in ", season - 1, "/", season),
     fill = "Team"
   ) +
   theme(
@@ -128,13 +151,13 @@ all_teams %>%
   ggplot(aes(sign, fill = position.x)) +
   geom_bar() +
   labs(
-    title = "Signs of the PWHL by position",
+    title = paste0("Signs of the PWHL by position  in ", season - 1, "/", season),
     fill = "Position"
   ) +
   theme(
     plot.title = element_text(size=24)
 )
-
+ 
 
 ```
 
@@ -149,16 +172,15 @@ Let's explore the astrological composition of our top scorers and top penalty mi
 # Grab the top 10 scorers
 
 tail(all_teams[order(as.numeric(all_teams$goals)),], 10) %>%
-  ggplot(aes(sign, fill = team)) +
+  ggplot(aes(sign, fill = team.y)) +
   geom_bar() +
   scale_fill_manual(values = colours) +
   labs(
-    title = "Sign of top 10 scorers",
+    title = paste0("Sign of top 10 scorers in ", season - 1, "/", season),
     fill = "Team"
   ) +
   theme(
-    plot.title = element_text(size=24),
-    text = element_text(family = "Quicksand")
+    plot.title = element_text(size=24)
     )
 
 ```
@@ -168,13 +190,13 @@ tail(all_teams[order(as.numeric(all_teams$goals)),], 10) %>%
 
 ```{r}
 
-all_teams %>% group_by(team, sign) %>%
+all_teams %>% group_by(team.y, sign) %>%
   summarize(goals = sum(as.numeric(goals))) %>%
-  ggplot(aes(sign, goals, fill = team)) +
+  ggplot(aes(sign, goals, fill = team.y)) +
     geom_bar(stat = "identity") + 
     scale_fill_manual(values = colours) +
     labs(
-    title = "Goals by sign",
+    title = paste0("Goals by sign in ", season - 1, "/", season),
     fill = "Team"
   ) +
     theme(
@@ -187,14 +209,14 @@ all_teams %>% group_by(team, sign) %>%
 ```{r}
 # this could be skewed if there are many libras in the PWHL, for example.
 
-all_teams %>% group_by(team, sign) %>%
+all_teams %>% group_by(team.y, sign) %>%
   summarize(goals = sum(as.numeric(goals)), n = n()) %>%
   mutate(adjusted_goals = goals / n) %>%
-  ggplot(aes(sign, adjusted_goals, fill = team)) +
+  ggplot(aes(sign, adjusted_goals, fill = team.y)) +
     geom_bar(stat = "identity") + 
     scale_fill_manual(values = colours) +
     labs(
-    title = "Proportional Goals by sign",
+    title = paste0("Proportional Goals by sign in ", season - 1, "/", season),
     fill = "Team"
   ) +
     theme(
@@ -207,11 +229,11 @@ all_teams %>% group_by(team, sign) %>%
 ```{r}
 
 tail(all_teams[order(as.numeric(all_teams$penalty_minutes)),], 10) %>%
-  ggplot(aes(sign, fill = team)) +
+  ggplot(aes(sign, fill = team.y)) +
   geom_bar() + 
   scale_fill_manual(values = colours) +
   labs(
-    title = "Sign of top 10 penalty-havers",
+    title = paste0("Sign of top 10 penalty-havers in ", season - 1, "/", season),
     fill = "Team"
   ) +
   theme(
@@ -224,13 +246,13 @@ tail(all_teams[order(as.numeric(all_teams$penalty_minutes)),], 10) %>%
 ```{r}
 # sim for penalty min
 
-all_teams %>% group_by(team, sign) %>%
+all_teams %>% group_by(team.y, sign) %>%
   summarize(penalty_minutes = sum(as.numeric(penalty_minutes))) %>%
-  ggplot(aes(sign, penalty_minutes, fill = team)) +
+  ggplot(aes(sign, penalty_minutes, fill = team.y)) +
     geom_bar(stat = "identity") + 
     scale_fill_manual(values = colours) +
     labs(
-    title = "Penalty minutes by sign",
+    title = paste0("Penalty minutes by sign in ", season - 1, "/", season),
     fill = "Team"
   ) +
     theme(
@@ -242,14 +264,14 @@ all_teams %>% group_by(team, sign) %>%
 
 ```{r}
 
-all_teams %>% group_by(team, sign) %>%
+all_teams %>% group_by(team.y, sign) %>%
   summarize(penalty_minutes = sum(as.numeric(penalty_minutes)), n = n()) %>%
   mutate(adjusted_penalty_minutes = penalty_minutes / n) %>%
-  ggplot(aes(sign, adjusted_penalty_minutes, fill = team)) +
+  ggplot(aes(sign, adjusted_penalty_minutes, fill = team.y)) +
     geom_bar(stat = "identity") + 
     scale_fill_manual(values = colours) +
     labs(
-    title = "Proportional penalty minutes by sign",
+    title = paste0("Proportional penalty minutes by sign in ", season - 1, "/", season),
     fill = "Team"
   ) +
     theme(
@@ -261,9 +283,9 @@ all_teams %>% group_by(team, sign) %>%
 
 ```{r}
 
-goalies <- pwhl_stats() %>% 
+goalies <- pwhl_stats_fix(position = "goalie", season = 2025) %>% 
   merge(
-    all_teams, on = "player_name"
+    all_teams, on = "player_id"
   )
 
 surnames <- unlist(strsplit(goalies$player_name, " "))
@@ -275,7 +297,7 @@ goalies %>%
   aes(player_name, save_percentage, fill = sign)) +
   geom_bar(stat = "identity") + 
   labs(
-    title = "Save Percentage by Goalie (and her sign)",
+    title = paste0("Save Percentage by Goalie (and her sign) in ", season - 1, "/", season),
     fill = "Sign",
     x = "Player",
     y = "Save Percentage"
