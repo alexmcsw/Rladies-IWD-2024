@@ -4,7 +4,7 @@ library(fastRhockey)
 library(tidyverse)
 library(DescTools)
 library(janitor)
-source("./Rladies-IWD-2024/fixed_functions.R")
+source("./fixed_functions.R")
 
 colours <- list(
 "BOS" = "#154734",
